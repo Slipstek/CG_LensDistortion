@@ -1,10 +1,4 @@
-﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-Shader "Unlit/LensDistortionShader"
+﻿Shader "Unlit/LensDistortionShader"
 {
 	Properties
 	{
@@ -80,33 +74,33 @@ Shader "Unlit/LensDistortionShader"
             // FRAGMENT SHADER
             half4 frag (v2f i) : SV_Target
             {
- 				half4 pixelCol = (0, 0, 0, 0);
-
-				float k1 = _Factor_K1;
-				float k2 = _Factor_K2;
-				float p1 = _Factor_P1;
-				float p2 = _Factor_P2;
-
+				// Distance to texture center (total width and length of texture is 1)
 				float distance_x = 0.5;
 				float distance_y = 0.5;
-
+				// Get pixel x position and subtract half of texture size to center it in x scale
 				float uu = i.grabPosUV.x - distance_x;
+				// Swap pixel side in y direction as distortion algorithms y axis directs in opposite direction of unitys y axis
 				float vu = 1 - i.grabPosUV.y;
+				// Get pixel y position and subtract half of texture size to center it in y scale
 				vu = vu - distance_y;
 
+				// Calculate pixel distance from texture center
 				float r = sqrt(uu * uu + vu * vu);
-
-				float ud = uu + uu * (k1 * pow(r,2) + k2 * pow(r,4)) + 2 * p1 * uu * vu + p2 * (pow(r,2) + 2 * pow(uu,2));
-				float vd = vu + vu * (k1 * pow(r,2) + k2 * pow(r,4)) + p1 * (pow(r,2) + 2 * pow(r,2)) + 2 * p2 * uu * vu;
-               
+				// Precalculate power of 2 and 4 of pixel distance to texture center
+				float r2 = pow(r, 2);
+				float r4 = pow(r, 4);
+				// Brown-Conrady distortion algorithm
+				// Calculate radial distortion
+				float ud = uu + uu * (_Factor_K1 * r2 + _Factor_K2 * r4) + 2 * _Factor_P1 * uu * vu + _Factor_P2 * (r2 + 2 * pow(uu,2));
+				// Calculate tangential distortion
+				float vd = vu + vu * (_Factor_K1 * r2 + _Factor_K2 * r4) + _Factor_P1 * (r2 + 2 * r2) + 2 * _Factor_P2 * uu * vu;
+                // Move pixel back to actual position
 				ud = ud + distance_x;
 				vd = vd + distance_y;
-
+				// Swap y axis again
 				vd = 1 - vd;
-			   
-			    pixelCol = tex2D(_GrabTexture, float2(ud, vd));
-
-                return pixelCol;
+			    // Return manipulated pixel
+			    return tex2D(_GrabTexture, float2(ud, vd));
             }
             ENDCG
         }
