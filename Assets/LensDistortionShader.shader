@@ -76,7 +76,6 @@ Shader "Unlit/LensDistortionShader"
 			float _Factor_P2;
 
 			sampler2D _GrabTexture;
-			float4 _GrabTexture_TexelSize;
 
             // FRAGMENT SHADER
             half4 frag (v2f i) : SV_Target
@@ -87,20 +86,27 @@ Shader "Unlit/LensDistortionShader"
 				float k2 = _Factor_K2;
 				float p1 = _Factor_P1;
 				float p2 = _Factor_P2;
+
 				float distance_x = 0.5;
 				float distance_y = 0.5;
-				float r = sqrt(distance_x * distance_x + distance_y * distance_y);
+
 				float uu = i.grabPosUV.x - distance_x;
-				float vu = -i.grabPosUV.y + distance_y;
+				float vu = 1 - i.grabPosUV.y;
+				vu = vu - distance_y;
+
+				float r = sqrt(uu * uu + vu * vu);
+
 				float ud = uu + uu * (k1 * pow(r,2) + k2 * pow(r,4)) + 2 * p1 * uu * vu + p2 * (pow(r,2) + 2 * pow(uu,2));
 				float vd = vu + vu * (k1 * pow(r,2) + k2 * pow(r,4)) + p1 * (pow(r,2) + 2 * pow(r,2)) + 2 * p2 * uu * vu;
-                pixelCol = tex2D(_GrabTexture, float2(ud, -vd));
-				//pixelCol = tex2D(_GrabTexture, float2(i.grabPosUV.x, i.grabPosUV.y));										
-				//pixelCol 
-                return pixelCol;
+               
+				ud = ud + distance_x;
+				vd = vd + distance_y;
 
-				//fixed4 col = tex2Dproj(_GrabTexture, i.grabPosUV);
-                //return col;
+				vd = 1 - vd;
+			   
+			    pixelCol = tex2D(_GrabTexture, float2(ud, vd));
+
+                return pixelCol;
             }
             ENDCG
         }
